@@ -13,7 +13,10 @@ It's highly recommended to install Python packages within a virtual environment 
 
 **To activate your virtual environment (if you have one):**
 
+First, navigate to your project's root directory (e.g., `USCCB2`):
+
 ```bash
+cd USCCB2
 source venv/bin/activate
 ```
 
