@@ -13,6 +13,7 @@ dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
 
 # Add new columns if they don't exist
 with engine.connect() as connection:
+    # Add new columns if they don't exist
     inspector = sqlalchemy.inspect(engine)
     columns = inspector.get_columns('dioceses')
     column_names = [col['name'] for col in columns]
@@ -24,36 +25,36 @@ with engine.connect() as connection:
         connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN url_checked_at DATETIME"))
         print("Added url_checked_at column.")
 
-# Re-reflect the table to include new columns
-dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
+    # Re-reflect the table to include new columns
+    dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
 
-# Iterate through dioceses and verify URLs
-with engine.connect() as connection:
-    select_query = dioceses_table.select()
-    result = connection.execute(select_query)
+    with connection.begin(): # Explicit transaction for updates
+        # Iterate through dioceses and verify URLs
+        select_query = dioceses_table.select()
+        result = connection.execute(select_query)
 
-    for diocese in result:
-        diocese_id = diocese.id
-        website_url = diocese.website
-        
-        url_status = ""
-        url_checked_at = datetime.now()
+        for diocese in result:
+            diocese_id = diocese.id
+            website_url = diocese.website
+            
+            url_status = ""
+            url_checked_at = datetime.now()
 
-        if website_url:
-            try:
-                response = requests.head(website_url, allow_redirects=True, timeout=5)
-                url_status = str(response.status_code)
-            except requests.exceptions.RequestException as e:
-                url_status = f"Error: {e}"
-        else:
-            url_status = "No URL provided"
+            if website_url:
+                try:
+                    response = requests.get(website_url, allow_redirects=True, timeout=5)
+                    url_status = str(response.status_code)
+                except requests.exceptions.RequestException as e:
+                    url_status = f"Error: {e}"
+            else:
+                url_status = "No URL provided"
 
-        # Update the database
-        update_query = sqlalchemy.update(dioceses_table).where(dioceses_table.c.id == diocese_id).values(
-            url_status=url_status,
-            url_checked_at=url_checked_at
-        )
-        connection.execute(update_query)
-        print(f"Updated diocese ID {diocese_id}: URL Status - {url_status}")
+            # Update the database
+            update_query = sqlalchemy.update(dioceses_table).where(dioceses_table.c.id == diocese_id).values(
+                url_status=url_status,
+                url_checked_at=url_checked_at
+            )
+            connection.execute(update_query)
+            print(f"Updated diocese ID {diocese_id}: URL Status - {url_status}")
 
 print("URL verification complete.")
