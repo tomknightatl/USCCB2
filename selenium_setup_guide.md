@@ -9,7 +9,15 @@ This guide outlines the steps to set up Selenium with Python for web scraping ta
 
 ## Step 1: Install the Selenium Python Library
 
-Open your terminal or command prompt and run the following command to install the `selenium` package:
+It's highly recommended to install Python packages within a virtual environment to avoid conflicts with system-wide packages. If you're using a virtual environment (like the `venv` in this project), activate it first.
+
+**To activate your virtual environment (if you have one):**
+
+```bash
+source venv/bin/activate
+```
+
+Once your virtual environment is activated (you should see `(venv)` at the beginning of your terminal prompt), run the following command to install the `selenium` package:
 
 ```bash
 pip install selenium
