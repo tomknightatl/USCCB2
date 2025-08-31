@@ -25,7 +25,9 @@ pip install selenium
 
 ## Step 2: Download the ChromeDriver
 
-Selenium needs a browser-specific driver to interact with the browser. For Google Chrome, you need `ChromeDriver`.
+Selenium needs a browser-specific driver to interact with the browser. For Google Chrome or Chromium, you need the appropriate `ChromeDriver`. The installation method depends on your system's architecture (x86/x64 or ARM).
+
+### For x86/x64 Architectures (Most Desktops/Laptops)
 
 1.  **Check your Chrome Browser Version:**
     *   Open Chrome.
@@ -41,15 +43,32 @@ Selenium needs a browser-specific driver to interact with the browser. For Googl
     *   **Option A (Recommended - Add to PATH):** Move this `chromedriver` executable to a directory that is already in your system's PATH. Common locations include `/usr/local/bin` on Linux/macOS, or any directory you've added to your PATH environment variable. This allows Selenium to find the driver automatically.
     *   **Option B (Specify Path in Script):** If you prefer not to modify your PATH, you can place the `chromedriver` executable anywhere and then specify its full path in your Python script when initializing the Selenium WebDriver.
 
-    *Example of specifying path in script:*
-    ```python
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
+### For ARM Architectures (e.g., Raspberry Pi)
 
-    # Replace with the actual path to your chromedriver executable
-    webdriver_service = Service('/path/to/your/chromedriver')
-    driver = webdriver.Chrome(service=webdriver_service)
+For ARM-based systems, the ChromeDriver is often available through your system's package manager. This is typically for Chromium, which is compatible with Selenium's Chrome WebDriver.
+
+1.  **Update Package List:**
+    ```bash
+    sudo apt-get update
     ```
+
+2.  **Install Chromium and ChromeDriver:**
+    ```bash
+    sudo apt-get install chromium chromium-chromedriver
+    ```
+    This command installs both the Chromium browser and its corresponding ChromeDriver. The `chromium-chromedriver` executable should be automatically placed in a directory that is in your system's PATH.
+
+### Example of specifying path in script (for both architectures if not in PATH):
+
+```python
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+
+# Replace with the actual path to your chromedriver/chromium-chromedriver executable
+# Example for x86/x64: webdriver_service = Service('/path/to/your/chromedriver')
+# Example for ARM (if not in PATH): webdriver_service = Service('/usr/bin/chromium-chromedriver') # Common path
+driver = webdriver.Chrome(service=webdriver_service)
+```
 
 ## Step 3: Verify Installation
 
