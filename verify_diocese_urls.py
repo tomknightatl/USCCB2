@@ -42,7 +42,7 @@ with engine.connect() as connection:
 
             if website_url:
                 try:
-                    response = requests.head(website_url, allow_redirects=True, timeout=5)
+                    response = requests.get(website_url, allow_redirects=True, timeout=5)
                     url_status = str(response.status_code)
                 except requests.exceptions.RequestException as e:
                     url_status = f"Error: {e}"
