@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime
+import traceback
 
 # --- Configuration ---
 DATABASE_PATH = 'dioceses.db'
@@ -60,32 +61,27 @@ def scrape_parishes():
     options.add_argument('--disable-gpu')
     options.add_argument('--no-sandbox')
 
-    try:
-        # If CHROME_DRIVER_PATH is defined, use it
-        # service = Service(CHROME_DRIVER_PATH)
-        # driver = webdriver.Chrome(service=service, options=options)
-        # Otherwise, assume chromedriver is in PATH
-        driver = webdriver.Chrome(options=options)
-    except Exception as e:
-        print(f"Error initializing WebDriver. Make sure ChromeDriver is installed and in your PATH, or specify CHROME_DRIVER_PATH. Error: {e}")
-        return
+    # Ensure chromedriver is in your PATH or specify its path here
+    # CHROME_DRIVER_PATH = '/path/to/your/chromedriver' # Uncomment and set if not in PATH
+    webdriver_service = Service('/usr/bin/chromedriver')
+    driver = webdriver.Chrome(service=webdriver_service, options=options)
 
     driver.get(TARGET_URL)
-    wait = WebDriverWait(driver, 20) # Increased wait time for dynamic content
+    wait = WebDriverWait(driver, 60) # Increased wait time for dynamic content
 
     processed_parishes = set() # To keep track of already processed parishes and avoid duplicates
 
     while True:
         try:
             # Wait for parish list to load
-            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.fusion-map-pin-content h4')))
+            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
 
-            parish_elements = driver.find_elements(By.CSS_SELECTOR, 'div.fusion-map-pin-content h4')
+            parish_elements = driver.find_elements(By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')
             current_page_parish_names = [elem.text for elem in parish_elements]
 
             for i in range(len(parish_elements)):
                 # Re-find elements in case DOM changed after a click
-                parish_elements = driver.find_elements(By.CSS_SELECTOR, 'div.fusion-map-pin-content h4')
+                parish_elements = driver.find_elements(By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')
                 parish_name_elem = parish_elements[i]
                 parish_name = parish_name_elem.text
 
@@ -97,7 +93,9 @@ def scrape_parishes():
                 try:
                     # Click on the parish name to reveal details
                     # Use JavaScript click if direct click fails
-                    driver.execute_script("arguments[0].click();", parish_name_elem)
+                    # Click on the parent <a> element to reveal details
+                    clickable_element = parish_name_elem.find_element(By.XPATH, './parent::a')
+                    driver.execute_script("arguments[0].click();", clickable_element)
 
                     # Wait for the details to appear in the info window
                     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.gm-style-iw-d')))
@@ -158,7 +156,7 @@ def scrape_parishes():
                         print(f"Could not find or click close button: {close_e}")
                         # If close button not found, try to click outside or refresh to reset
                         driver.refresh()
-                        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.fusion-map-pin-content h4')))
+                        wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
 
 
                 except Exception as e:
@@ -171,7 +169,7 @@ def scrape_parishes():
                     except:
                         pass
                     driver.refresh() # Refresh page to reset state if something went wrong
-                    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div.fusion-map-pin-content h4')))
+                    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
                     continue # Continue to next parish
 
             # Check for "Next" button for pagination
@@ -201,7 +199,7 @@ def scrape_parishes():
                 break # Exit loop if no next button is found
 
         except Exception as e:
-            print(f"Error during scraping loop: {e}")
+            print(f"Error during scraping loop: {e}\n{traceback.format_exc()}")
             break # Exit loop on general error
 
     driver.quit()
