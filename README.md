@@ -14,10 +14,10 @@ This project provides a set of Python scripts to scrape information about dioces
 ## Project Structure
 
 - `usccb_scraper.py`: Script to scrape initial diocese data from USCCB.
-- `scrape_dioceses.py`: Script to scrape detailed information from individual diocese websites.
+
 - `analyze_diocese_websites.py`: Script for analyzing the content of scraped diocese websites.
 - `verify_diocese_urls.py`: Script to verify the URLs of diocese websites.
-- `update_db_entry.py`: Utility to update entries within the `dioceses.db` database.
+
 - `view_diocese_analysis.py`: Script to view the analysis results stored in the database.
 - `extract-parishes-from-map.py`: Script to extract parish information from a map-based parish finder.
 - `dioceses.db`: SQLite database file where all collected and analyzed data is stored.
@@ -45,11 +45,10 @@ This project provides a set of Python scripts to scrape information about dioces
 
 3.  **Install dependencies:**
 
-    (You will need to install the required Python packages. A `requirements.txt` file is typically used for this. If one doesn't exist, you'll need to identify and install them manually, e.g., `pip install requests beautifulsoup4 lxml`) 
+    Install the required Python packages using the `requirements.txt` file:
 
     ```bash
-    # Example (replace with actual dependencies)
-    pip install requests beautifulsoup4 lxml
+    pip install -r requirements.txt
     ```
 
 ## Usage
@@ -62,13 +61,7 @@ Each script can be run independently. Here's a general workflow:
     python usccb_scraper.py
     ```
 
-2.  **Detailed Scrape:** Run `scrape_dioceses.py` to gather more in-depth data from individual diocese websites.
-
-    ```bash
-    python scrape_dioceses.py
-    ```
-
-3.  **Verify URLs:** Use `verify_diocese_urls.py` to check the validity of the collected URLs.
+2.  **Verify URLs:** Use `verify_diocese_urls.py` to check the validity of the collected URLs.
 
     ```bash
     python verify_diocese_urls.py
@@ -77,22 +70,19 @@ Each script can be run independently. Here's a general workflow:
 4.  **Analyze Websites:** Execute `analyze_diocese_websites.py` to perform content analysis on the websites.
 
     ```bash
-    python analyze_diocese_websites.py
+    python analyze_diocese_websites.py # Analyzes up to 5 dioceses by default
+    python analyze_diocese_websites.py --max-dioceses-to-analyze 10 # Analyzes up to 10 dioceses
     ```
 
-5.  **View Analysis:** Use `view_diocese_analysis.py` to inspect the results.
+4.  **View Analysis:** Use `view_diocese_analysis.py` to inspect the results.
 
     ```bash
     python view_diocese_analysis.py
     ```
 
-6.  **Update Database Entries:** If needed, use `update_db_entry.py` to manually update specific records.
 
-    ```bash
-    python update_db_entry.py
-    ```
 
-7.  **Extract Parishes from Map:** Use `extract-parishes-from-map.py` to scrape parish data from a map-based interface. By default, it will extract 5 parishes.
+6.  **Extract Parishes from Map:** Use `extract-parishes-from-map.py` to scrape parish data from a map-based interface. By default, it will extract 5 parishes.
 
     ```bash
     python extract-parishes-from-map.py
