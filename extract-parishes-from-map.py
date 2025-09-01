@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime
 import traceback
+import argparse
 
 # --- Configuration ---
 DATABASE_PATH = 'dioceses.db'
@@ -52,7 +53,7 @@ def insert_parish_data(parish_data):
     conn.close()
 
 # --- Web Scraping Logic ---
-def scrape_parishes():
+def scrape_parishes(max_parishes):
     setup_database()
 
     # Initialize WebDriver
@@ -70,6 +71,7 @@ def scrape_parishes():
     wait = WebDriverWait(driver, 60) # Increased wait time for dynamic content
 
     processed_parishes = set() # To keep track of already processed parishes and avoid duplicates
+    parishes_extracted = 0
 
     while True:
         try:
@@ -80,6 +82,10 @@ def scrape_parishes():
             current_page_parish_names = [elem.text for elem in parish_elements]
 
             for i in range(len(parish_elements)):
+                if parishes_extracted >= max_parishes:
+                    print(f"Reached max parishes limit of {max_parishes}.")
+                    break
+
                 # Re-find elements in case DOM changed after a click
                 parish_elements = driver.find_elements(By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')
                 parish_name_elem = parish_elements[i]
@@ -91,48 +97,62 @@ def scrape_parishes():
                 print(f"Processing parish: {parish_name}")
 
                 try:
-                    # Click on the parish name to reveal details
-                    # Use JavaScript click if direct click fails
-                    # Click on the parent <a> element to reveal details
+                    print(f"  [DEBUG] Finding clickable element for {parish_name}")
                     clickable_element = parish_name_elem.find_element(By.XPATH, './parent::a')
+                    print(f"  [DEBUG] Found clickable element. Clicking...")
                     driver.execute_script("arguments[0].click();", clickable_element)
+                    print(f"  [DEBUG] Clicked. Waiting for info window...")
 
                     # Wait for the details to appear in the info window
                     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.gm-style-iw-d')))
+                    print(f"  [DEBUG] Info window appeared. Finding info window element...")
 
                     info_window = driver.find_element(By.CSS_SELECTOR, 'div.gm-style-iw-d')
+                    print(f"  [DEBUG] Found info window. Extracting data...")
 
                     address = ""
                     phone = ""
                     fax = ""
                     website = ""
 
-                    # Extract address (usually in a <p> tag or similar)
+                    # Extract address
                     try:
+                        print("  [DEBUG] Extracting address...")
                         address_elem = info_window.find_element(By.XPATH, './/p[contains(text(), "Address:")]')
                         address = address_elem.text.replace("Address:", "").strip()
-                    except:
-                        pass # Address might be directly in the info window without a specific label
+                        print(f"  [DEBUG] Extracted address: {address}")
+                    except Exception as e:
+                        print(f"  [DEBUG] Could not extract address: {e}")
+                        pass
 
                     # Extract phone
                     try:
+                        print("  [DEBUG] Extracting phone...")
                         phone_elem = info_window.find_element(By.XPATH, './/p[contains(text(), "Phone:")]')
                         phone = phone_elem.text.replace("Phone:", "").strip()
-                    except:
+                        print(f"  [DEBUG] Extracted phone: {phone}")
+                    except Exception as e:
+                        print(f"  [DEBUG] Could not extract phone: {e}")
                         pass
 
                     # Extract fax
                     try:
+                        print("  [DEBUG] Extracting fax...")
                         fax_elem = info_window.find_element(By.XPATH, './/p[contains(text(), "Fax:")]')
                         fax = fax_elem.text.replace("Fax:", "").strip()
-                    except:
+                        print(f"  [DEBUG] Extracted fax: {fax}")
+                    except Exception as e:
+                        print(f"  [DEBUG] Could not extract fax: {e}")
                         pass
 
                     # Extract website
                     try:
+                        print("  [DEBUG] Extracting website...")
                         website_elem = info_window.find_element(By.XPATH, './/a[contains(@href, "http")]')
                         website = website_elem.get_attribute('href').strip()
-                    except:
+                        print(f"  [DEBUG] Extracted website: {website}")
+                    except Exception as e:
+                        print(f"  [DEBUG] Could not extract website: {e}")
                         pass
 
                     parish_data = {
@@ -144,16 +164,21 @@ def scrape_parishes():
                         'source_url': TARGET_URL,
                         'extraction_datetime': datetime.now().isoformat()
                     }
+                    print(f"  [DEBUG] Parish data: {parish_data}")
                     insert_parish_data(parish_data)
                     processed_parishes.add(parish_name)
+                    parishes_extracted += 1
+                    print(f"  [DEBUG] Inserted parish data into DB.")
 
                     # Close the info window to click on the next parish
                     try:
+                        print("  [DEBUG] Closing info window...")
                         close_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.gm-ui-hover-effect')))
                         driver.execute_script("arguments[0].click();", close_button)
                         time.sleep(1) # Small delay after closing
+                        print("  [DEBUG] Closed info window.")
                     except Exception as close_e:
-                        print(f"Could not find or click close button: {close_e}")
+                        print(f"  [DEBUG] Could not find or click close button: {close_e}")
                         # If close button not found, try to click outside or refresh to reset
                         driver.refresh()
                         wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
@@ -161,6 +186,7 @@ def scrape_parishes():
 
                 except Exception as e:
                     print(f"Error processing parish {parish_name}: {e}")
+                    print(f"  [DEBUG] An error occurred: {traceback.format_exc()}")
                     # Try to close info window if it's open to proceed
                     try:
                         close_button = driver.find_element(By.CSS_SELECTOR, 'button.gm-ui-hover-effect')
@@ -171,6 +197,9 @@ def scrape_parishes():
                     driver.refresh() # Refresh page to reset state if something went wrong
                     wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
                     continue # Continue to next parish
+
+            if parishes_extracted >= max_parishes:
+                break
 
             # Check for "Next" button for pagination
             next_button = None
@@ -190,7 +219,7 @@ def scrape_parishes():
                 # The prompt mentioned "multiple pages", which might refer to a list view if one exists, or a misunderstanding of the map's behavior.
                 # If all pins are indeed loaded, then the loop above will cover them.
                 # If there's a "list view" that has pagination, we'd need to switch to that view first.
-                # Based on the URL, it's a map view. I'll assume all pins are accessible from the initial load or by panning/zooming.
+                # Based on the. URL, it's a map view. I'll assume all pins are accessible from the initial load or by panning/zooming.
                 # If there's no explicit "next page" button, we break the loop.
                 print("No explicit 'Next' button found. Assuming all parishes are on the initial map or accessible via map interaction.")
                 break # Exit loop if no next button is found or all parishes processed
@@ -206,4 +235,8 @@ def scrape_parishes():
     print("Scraping complete.")
 
 if __name__ == "__main__":
-    scrape_parishes()
+    parser = argparse.ArgumentParser(description='Scrape parish data from a website.')
+    parser.add_argument('--max-parishes', type=int, default=5,
+                        help='The maximum number of parishes to extract. Defaults to 5.')
+    args = parser.parse_args()
+    scrape_parishes(args.max_parishes)

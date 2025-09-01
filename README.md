@@ -19,6 +19,7 @@ This project provides a set of Python scripts to scrape information about dioces
 - `verify_diocese_urls.py`: Script to verify the URLs of diocese websites.
 - `update_db_entry.py`: Utility to update entries within the `dioceses.db` database.
 - `view_diocese_analysis.py`: Script to view the analysis results stored in the database.
+- `extract-parishes-from-map.py`: Script to extract parish information from a map-based parish finder.
 - `dioceses.db`: SQLite database file where all collected and analyzed data is stored.
 
 ## System Architecture
@@ -89,6 +90,18 @@ Each script can be run independently. Here's a general workflow:
 
     ```bash
     python update_db_entry.py
+    ```
+
+7.  **Extract Parishes from Map:** Use `extract-parishes-from-map.py` to scrape parish data from a map-based interface. By default, it will extract 5 parishes.
+
+    ```bash
+    python extract-parishes-from-map.py
+    ```
+
+    You can specify the number of parishes to scrape using the `--max-parishes` argument.
+
+    ```bash
+    python extract-parishes-from-map.py --max-parishes 10
     ```
 
 ## Database (`dioceses.db`)
