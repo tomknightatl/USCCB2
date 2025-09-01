@@ -21,6 +21,11 @@ This project provides a set of Python scripts to scrape information about dioces
 - `view_diocese_analysis.py`: Script to view the analysis results stored in the database.
 - `dioceses.db`: SQLite database file where all collected and analyzed data is stored.
 
+## System Architecture
+
+![USCCB Diocese Scraper Architecture](./docs/architecture-diagram.svg)
+
+
 ## Setup and Installation
 
 1.  **Clone the repository:**
