@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime
 import traceback
+import argparse
 
 # --- Configuration ---
 DATABASE_PATH = 'dioceses.db'
@@ -52,7 +53,7 @@ def insert_parish_data(parish_data):
     conn.close()
 
 # --- Web Scraping Logic ---
-def scrape_parishes():
+def scrape_parishes(max_parishes):
     setup_database()
 
     # Initialize WebDriver
@@ -70,6 +71,7 @@ def scrape_parishes():
     wait = WebDriverWait(driver, 60) # Increased wait time for dynamic content
 
     processed_parishes = set() # To keep track of already processed parishes and avoid duplicates
+    parishes_extracted = 0
 
     while True:
         try:
@@ -80,6 +82,10 @@ def scrape_parishes():
             current_page_parish_names = [elem.text for elem in parish_elements]
 
             for i in range(len(parish_elements)):
+                if parishes_extracted >= max_parishes:
+                    print(f"Reached max parishes limit of {max_parishes}.")
+                    break
+
                 # Re-find elements in case DOM changed after a click
                 parish_elements = driver.find_elements(By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')
                 parish_name_elem = parish_elements[i]
@@ -146,6 +152,7 @@ def scrape_parishes():
                     }
                     insert_parish_data(parish_data)
                     processed_parishes.add(parish_name)
+                    parishes_extracted += 1
 
                     # Close the info window to click on the next parish
                     try:
@@ -171,6 +178,9 @@ def scrape_parishes():
                     driver.refresh() # Refresh page to reset state if something went wrong
                     wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'li.corePrettyStyle > a > span')))
                     continue # Continue to next parish
+
+            if parishes_extracted >= max_parishes:
+                break
 
             # Check for "Next" button for pagination
             next_button = None
@@ -206,4 +216,8 @@ def scrape_parishes():
     print("Scraping complete.")
 
 if __name__ == "__main__":
-    scrape_parishes()
+    parser = argparse.ArgumentParser(description='Scrape parish data from a website.')
+    parser.add_argument('--max-parishes', type=int, default=5,
+                        help='The maximum number of parishes to extract. Defaults to 5.')
+    args = parser.parse_args()
+    scrape_parishes(args.max_parishes)
