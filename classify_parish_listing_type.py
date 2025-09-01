@@ -9,30 +9,20 @@ metadata = sqlalchemy.MetaData()
 
 # Reflect the existing table structure
 dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
-
-# Add new columns if they don't exist
-with engine.connect() as connection:
-    inspector = sqlalchemy.inspect(engine)
-    columns = inspector.get_columns('dioceses')
-    column_names = [col['name'] for col in columns]
-
-    if 'listing_type' not in column_names:
-        connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN listing_type TEXT"))
-        print("Added listing_type column.")
-    if 'listing_type_checked_at' not in column_names:
-        connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN listing_type_checked_at DATETIME"))
-        print("Added listing_type_checked_at column.")
-
-    # Re-reflect the table to include new columns
-    dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
+diocese_parish_lists_table = sqlalchemy.Table('diocese_parish_lists', metadata, autoload_with=engine)
 
 def classify_listing_types(max_dioceses_to_visit=None):
     with engine.connect() as connection:
         with connection.begin(): # Explicit transaction for updates
-            select_query = dioceses_table.select().where(
+            select_query = sqlalchemy.select(
+                dioceses_table.c.id.label('diocese_id'),
+                dioceses_table.c.name.label('diocese_name'),
+                diocese_parish_lists_table.c.id.label('parish_list_id'),
+                diocese_parish_lists_table.c.parish_listing_url
+            ).join(diocese_parish_lists_table, dioceses_table.c.id == diocese_parish_lists_table.c.diocese_id).where(
                 sqlalchemy.and_(
-                    dioceses_table.c.parish_listing_url != None,
-                    dioceses_table.c.listing_type_checked_at == None
+                    diocese_parish_lists_table.c.parish_listing_url != None,
+                    diocese_parish_lists_table.c.listing_type_checked_at == None
                 )
             )
             
@@ -41,10 +31,11 @@ def classify_listing_types(max_dioceses_to_visit=None):
 
             result = connection.execute(select_query)
 
-            for diocese in result:
-                diocese_id = diocese.id
-                parish_listing_url = diocese.parish_listing_url
-                diocese_name = diocese.name
+            for row in result:
+                diocese_id = row.diocese_id
+                parish_list_id = row.parish_list_id
+                parish_listing_url = row.parish_listing_url
+                diocese_name = row.diocese_name
 
                 listing_type = ""
                 listing_type_checked_at = datetime.now()
@@ -60,7 +51,7 @@ def classify_listing_types(max_dioceses_to_visit=None):
                     listing_type = "No parish listing URL provided."
 
                 # Update the database
-                update_query = sqlalchemy.update(dioceses_table).where(dioceses_table.c.id == diocese_id).values(
+                update_query = sqlalchemy.update(diocese_parish_lists_table).where(diocese_parish_lists_table.c.id == parish_list_id).values(
                     listing_type=listing_type,
                     listing_type_checked_at=listing_type_checked_at
                 )

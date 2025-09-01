@@ -9,33 +9,18 @@ metadata = sqlalchemy.MetaData()
 
 # Reflect the existing table structure
 dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
-
-# Add new columns if they don't exist
-with engine.connect() as connection:
-    inspector = sqlalchemy.inspect(engine)
-    columns = inspector.get_columns('dioceses')
-    column_names = [col['name'] for col in columns]
-
-    if 'parish_listing_description' not in column_names:
-        connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN parish_listing_description TEXT"))
-        print("Added parish_listing_description column.")
-    if 'parish_listing_url' not in column_names:
-        connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN parish_listing_url TEXT"))
-        print("Added parish_listing_url column.")
-    if 'parish_listing_checked_at' not in column_names:
-        connection.execute(sqlalchemy.text("ALTER TABLE dioceses ADD COLUMN parish_listing_checked_at DATETIME"))
-        print("Added parish_listing_checked_at column.")
-
-    # Re-reflect the table to include new columns
-    dioceses_table = sqlalchemy.Table('dioceses', metadata, autoload_with=engine)
+2diocese_parish_lists_table = sqlalchemy.Table('diocese_parish_lists', metadata, autoload_with=engine)
 
 def analyze_dioceses():
     with engine.connect() as connection:
         with connection.begin(): # Explicit transaction for updates
-            select_query = dioceses_table.select().where(dioceses_table.c.parish_listing_checked_at == None)
+            # Select dioceses that don't have a corresponding entry in diocese_parish_lists
+            select_query = dioceses_table.select().where(
+                ~dioceses_table.c.id.in_(
+                    sqlalchemy.select(diocese_parish_lists_table.c.diocese_id)
+                )
+            )
             
-            
-
             result = connection.execute(select_query)
 
             for diocese in result:
@@ -71,14 +56,15 @@ def analyze_dioceses():
                 else:
                     parish_listing_description = "No website URL provided."
 
-                # Update the database
-                update_query = sqlalchemy.update(dioceses_table).where(dioceses_table.c.id == diocese_id).values(
+                # Insert into the new table
+                insert_query = diocese_parish_lists_table.insert().values(
+                    diocese_id=diocese_id,
                     parish_listing_description=parish_listing_description,
                     parish_listing_url=parish_listing_url,
                     parish_listing_checked_at=parish_listing_checked_at
                 )
-                connection.execute(update_query)
-                print(f"Updated diocese ID {diocese_id}.")
+                connection.execute(insert_query)
+                print(f"Inserted parish list info for diocese ID {diocese_id}.")
 
     print("Diocese website analysis complete.")
 

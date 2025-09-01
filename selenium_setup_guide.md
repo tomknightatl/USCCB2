@@ -17,7 +17,7 @@ First, navigate to your project's root directory (e.g., `USCCB2`):
 
 ```bash
 cd USCCB2
-source venv/bin/activate
+2
 ```
 
 Once your virtual environment is activated (you should see `(venv)` at the beginning of your terminal prompt), run the following command to install the `selenium` package:
